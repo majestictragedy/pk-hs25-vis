@@ -151,7 +151,7 @@ dcc.Tab(label='Modul-Explorer', style=tab_style, selected_style=tab_selected_sty
         html.Div([
             # Titel-Zeile
             html.Div([
-                html.Span("Interaktiver Modul-Explorer", style={
+                html.Span("Interaktives Curriculum Erlebnis", style={
                     'fontSize': '18px', 
                     'color': COLORS['blue_dark'], 
                     'fontWeight': 'bold', 
@@ -164,9 +164,7 @@ dcc.Tab(label='Modul-Explorer', style=tab_style, selected_style=tab_selected_sty
             # Erklärungstext (wie in Tab 1)
             html.Div([
                 html.Span("Filtern", style={'fontSize': '16px', 'fontWeight': 'bold', 'color': COLORS['gold_normal']}), 
-                " Sie das Curriculum nach verschiedenen Kriterien. Die Sunburst-Grafik zeigt die Verteilung der ",
-                html.Span("ECTS-Punkte", style={'fontWeight': 'bold'}),
-                " innerhalb der Modulgruppen.",
+                " Sie das Curriculum nach verschiedenen Kriterien. Die Grafik zeigt die Verteilung der ECTS-Punkte innerhalb der Modulgruppen.",
                 html.Br(),
             ], style={'fontSize': '16px', 'color': COLORS['text'], 'marginBottom': '20px'}),
             
