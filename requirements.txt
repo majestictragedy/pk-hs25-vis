@@ -6,5 +6,4 @@ openpyxl==3.1.5
 pandas 
 plotly 
 scipy==1.16.3
-textwrap
 os
