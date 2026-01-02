@@ -62,9 +62,9 @@ GROUP_COLORS = {
     'Methodik': '#17a2b8',
     'Betriebsökonomie': '#343a40',
     'Common': '#adb5bd',
-    'Arbeits- & Forschungs-Methodik': '#d63384',
-    'Informationsmethodik': '#20c997',
-    'Gesellschaft und Fremdsprachen': '#fd7e14'
+    'Arbeits- & Forschungs-Methodik': '#7B3F52',
+    'Informationsmethodik': '#8DAA91',
+    'Gesellschaft und Fremdsprachen': '#D18B60'
 }
 
 # --- 2. NETZWERK BERECHNEN ---
@@ -94,48 +94,49 @@ pos = nx.spring_layout(G, k=3.5, iterations=300, seed=42)
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
 tab_style = {'borderBottom': f'1px solid {COLORS["blue_light"]}', 'padding': '15px', 'fontWeight': 'bold', 'color': COLORS['text'], 'backgroundColor': 'white', 'fontFamily': 'Roboto, sans-serif'}
-tab_selected_style = {'borderTop': f'4px solid {COLORS["gold_normal"]}', 'borderBottom': '1px solid white', 'backgroundColor': 'white', 'color': COLORS['blue_dark'], 'padding': '15px', 'fontWeight': 'bold', 'fontFamily': 'Roboto, sans-serif'}
+tab_selected_style = {'borderTop': f'4px solid {COLORS["gold_normal"]}', 'borderBottom': '1px solid white', 'backgroundColor': 'white', 'color': COLORS['gold_normal'], 'padding': '15px', 'fontWeight': 'bold', 'fontFamily': 'Roboto, sans-serif'}
 content_style = {'border': '1px solid #ddd', 'borderTop': 'none', 'padding': '20px', 'backgroundColor': 'white', 'borderRadius': '0 0 5px 5px', 'boxShadow': '0 2px 5px rgba(0,0,0,0.05)'}
 
 app.layout = html.Div([
     html.Div([
-        html.H1("Curriculum Navigator 2026", style={'color': 'white', 'margin': '0', 'fontWeight': '300', 'letterSpacing': '1px'}),
-        html.P("BSc Information Science | FH Graubünden", style={'color': COLORS['blue_light'], 'margin': '5px 0 0 0', 'fontSize': '14px'})
+        html.H1("Curriculum Navigator 2026", style={'fontSize': '36px','color': 'white', 'margin': '0', 'fontWeight': '300', 'letterSpacing': '1px'}),
+        html.P("BSc Information Science | FH Graubünden", style={'fontSize': '20px','color': COLORS['blue_light'], 'margin': '5px 0 0 0'})
     ], style={'backgroundColor': COLORS['blue_dark'], 'padding': '20px 40px', 'width': '100%', 'boxSizing': 'border-box'}),
 
     html.Div([
         dcc.Tabs([
             # TAB 1: NETZWERK
-            dcc.Tab(label='Netzwerk & Lernpfade', style=tab_style, selected_style=tab_selected_style, children=[
+            dcc.Tab(label='Modul-Netzwerk', style=tab_style, selected_style=tab_selected_style, children=[
                 html.Div([
                     html.Div([
                         html.Div([
-                            html.Span("Interaktiver Studienplan", style={'fontSize': '18px', 'color': COLORS['blue_dark'], 'fontWeight': 'bold', 'display': 'inline-block'}),
+                            html.Span("Interaktives Curriculum Erlebnis", style={'fontSize': '18px', 'color': COLORS['blue_dark'], 'fontWeight': 'bold', 'display': 'inline-block'}),
                             html.Button('↺ Ansicht zurücksetzen', id='reset-btn', n_clicks=0, style={
                                 'marginLeft': '20px', 'padding': '5px 10px', 'backgroundColor': 'white', 'border': '1px solid #ccc', 'cursor': 'pointer', 'borderRadius': '3px'
                             }),
                         ], style={'display': 'inline-block'}),
                         
                         html.Div([
-                            html.Label("Verbindungen anzeigen:", style={'fontSize': '12px', 'marginRight': '10px'}),
+                            html.Label("Verbindungen anzeigen:", style={'fontSize': '14px', 'marginRight': '10px'}),
                             dcc.Checklist(
                                 id='network-mode-check',
                                 options=[
-                                    {'label': ' Hard (Pflicht)', 'value': 'hard'},
-                                    {'label': ' Soft (Empfohlen)', 'value': 'soft'}
+                                    {'label': ' Voraussetzungen (Muss)', 'value': 'hard'},
+                                    {'label': ' Eingangskompetenzen (Kann)', 'value': 'soft'}
                                 ],
                                 value=[], 
                                 inline=True,
-                                style={'display': 'inline-block', 'fontWeight': 'bold'}
+                                style={'display': 'inline-block', 'fontSize': '14px','fontWeight': 'bold'}
                             )
                         ], style={'float': 'right', 'marginTop': '5px'}),
                         
                         html.Br(), html.Br(),
-                        html.Span("Klicken", style={'fontWeight': 'bold', 'color': COLORS['gold_normal']}), " Sie auf ein Modul, um Voraussetzungen und Nachfolger zu sehen.",
+                        html.Span("Klicken", style={'fontSize': '16px', 'fontWeight': 'bold', 'color': COLORS['gold_normal']}), " Sie auf ein Modul, um seine Vernetzung und deren Abhängigkeiten im Studium hervorzuheben.",
                         html.Br(),
-                        html.Span("Legende: ", style={'fontSize': '12px', 'textTransform': 'uppercase', 'color': '#999', 'marginTop': '10px', 'display': 'inline-block'}),
-                        html.Span(" ───► Hard (Pflicht)", style={'color': COLORS['text'], 'fontWeight': 'bold', 'fontSize': '14px', 'marginLeft': '5px'}),
-                        html.Span(" ───► Soft (Empfohlen)", style={'color': '#bdc3c7', 'fontWeight': 'bold', 'fontSize': '14px', 'marginLeft': '10px'}),
+                        html.Br(),
+                        html.Span("Legende: ", style={'fontWeight': 'bold','fontSize': '12px', 'textTransform': 'uppercase', 'color': '#7a7760', 'marginTop': '10px', 'display': 'inline-block'}),
+                        html.Span(" ───► Voraussetzungen (Muss)", style={'color': COLORS['text'], 'fontWeight': 'bold', 'fontSize': '14px', 'marginLeft': '5px'}),
+                        html.Span(" ───► Eingangskompetenzen (Kann)", style={'color': '#bdc3c7', 'fontWeight': 'bold', 'fontSize': '14px', 'marginLeft': '10px'}),
 
                     ], style={'textAlign': 'left', 'padding': '15px', 'backgroundColor': '#f8f9fa', 'marginBottom': '20px', 'borderRadius': '4px', 'borderLeft': f'4px solid {COLORS["blue_normal"]}'}),
                     
@@ -143,18 +144,61 @@ app.layout = html.Div([
                 ], style=content_style)
             ]),
 
-            # TAB 2: EXPLORER
-            dcc.Tab(label='Statistik & Explorer', style=tab_style, selected_style=tab_selected_style, children=[
+# --- TAB 2: EXPLORER (Angepasste Version) ---
+dcc.Tab(label='Modul-Explorer', style=tab_style, selected_style=tab_selected_style, children=[
+    html.Div([
+        # DIE GRAUE BOX
+        html.Div([
+            # Titel-Zeile
+            html.Div([
+                html.Span("Interaktiver Modul-Explorer", style={
+                    'fontSize': '18px', 
+                    'color': COLORS['blue_dark'], 
+                    'fontWeight': 'bold', 
+                    'display': 'inline-block'
+                }),
+            ], style={'marginBottom': '10px'}),
+            
+            # Erklärungstext (wie in Tab 1)
+            html.Div([
+                html.Span("Filtern", style={'fontSize': '16px', 'fontWeight': 'bold', 'color': COLORS['gold_normal']}), 
+                " Sie das Curriculum nach verschiedenen Kriterien. Die Sunburst-Grafik zeigt die Verteilung der ",
+                html.Span("ECTS-Punkte", style={'fontWeight': 'bold'}),
+                " innerhalb der Modulgruppen.",
+                html.Br(),
+            ], style={'fontSize': '14px', 'color': COLORS['text'], 'marginBottom': '20px'}),
+            
+            # Die Filter-Elemente (Dropdowns) in einer Flex-Row
+            html.Div([
                 html.Div([
-                    html.Div([
-                        html.H4("Filter", style={'margin': '0 0 10px 0', 'color': COLORS['blue_dark']}),
-                        html.Div([html.Label("Semester:", style={'fontSize': '12px', 'fontWeight': 'bold'}), dcc.Dropdown(id='filter-semester', options=semester_options, value='ALL', clearable=False)], style={'width': '20%', 'marginRight': '2%'}),
-                        html.Div([html.Label("Themen (Tags):", style={'fontSize': '12px', 'fontWeight': 'bold'}), dcc.Dropdown(id='filter-tags', options=[{'label': t, 'value': t} for t in sorted_tags], multi=True, placeholder="Nach Themen filtern...")], style={'width': '35%', 'marginRight': '2%'}),
-                        html.Div([html.Label("Modulgruppe:", style={'fontSize': '12px', 'fontWeight': 'bold'}), dcc.Dropdown(id='filter-group', options=[{'label': g, 'value': g} for g in sorted(list(set(df['Modulgruppe'])))], multi=True, placeholder="Nach Gruppen filtern...")], style={'width': '35%'}),
-                    ], style={'display': 'flex', 'alignItems': 'flex-end', 'padding': '15px', 'backgroundColor': '#f8f9fa', 'borderBottom': '1px solid #eee', 'marginBottom': '20px'}),
-                    dcc.Graph(id='sunburst-graph', style={'height': '70vh'})
-                ], style=content_style)
-            ])
+                    html.Label("Semester:", style={'fontSize': '12px', 'fontWeight': 'bold'}), 
+                    dcc.Dropdown(id='filter-semester', options=semester_options, value='ALL', clearable=False)
+                ], style={'width': '20%', 'marginRight': '2%'}),
+                
+                html.Div([
+                    html.Label("Themen (Tags):", style={'fontSize': '12px', 'fontWeight': 'bold'}), 
+                    dcc.Dropdown(id='filter-tags', options=[{'label': t, 'value': t} for t in sorted_tags], multi=True, placeholder="Nach Themen filtern...")
+                ], style={'width': '37%', 'marginRight': '2%'}),
+                
+                html.Div([
+                    html.Label("Modulgruppe:", style={'fontSize': '12px', 'fontWeight': 'bold'}), 
+                    dcc.Dropdown(id='filter-group', options=[{'label': g, 'value': g} for g in sorted(list(set(df['Modulgruppe'])))], multi=True, placeholder="Nach Gruppen filtern...")
+                ], style={'width': '37%'})
+            ], style={'display': 'flex', 'alignItems': 'flex-end'})
+
+        ], style={
+            'textAlign': 'left', 
+            'padding': '15px', 
+            'backgroundColor': '#f8f9fa', 
+            'marginBottom': '20px', 
+            'borderRadius': '4px', 
+            'borderLeft': f'4px solid {COLORS["blue_normal"]}'
+        }),
+        
+        # Grafik-Bereich
+        dcc.Graph(id='sunburst-graph', style={'height': '70vh'})
+    ], style=content_style)
+])
         ], style={'height': '44px', 'alignItems': 'center'})
     ], style={'width': '96%', 'margin': '20px auto', 'fontFamily': 'Roboto, sans-serif'})
 ], style={'backgroundColor': 'white', 'minHeight': '100vh', 'fontFamily': 'Roboto, sans-serif', 'margin': '0', 'padding': '0'})
@@ -264,7 +308,7 @@ def update_network(clickData, mode_values, n_clicks):
                     font=dict(family="Roboto, sans-serif"), bgcolor='rgba(255,255,255,0.9)', bordercolor='#eee', borderwidth=1)
     ))
 
-# Callback 2: Sunburst (PX Style + Kürzel + Hover Fix)
+# Callback 2: Sunburst (Mit Hack gegen das Fragezeichen)
 @app.callback(Output('sunburst-graph', 'figure'),
               [Input('filter-semester', 'value'), Input('filter-tags', 'value'), Input('filter-group', 'value')])
 def update_sunburst(sem, tags, groups):
@@ -277,40 +321,52 @@ def update_sunburst(sem, tags, groups):
         fig = go.Figure(); fig.update_layout(title="Keine Daten entsprechen den Filtern")
         return fig
 
-    # TRICK: Wir nutzen Modul_ID als Label im Chart, aber Modul_Name für Hover
+    # 1. Figur erstellen
     fig = px.sunburst(
         dff, 
-        path=['Modulgruppe', 'Modul_ID'], # Hier ID statt Name für das Bild!
+        path=['Modulgruppe', 'Modul_ID'], 
         values='ECTS', 
         color='Modulgruppe', 
         color_discrete_map=GROUP_COLORS,
-        custom_data=['Modul_Name', 'Modulgruppe'] # Daten für Hover mitschicken
+        # Wir übergeben erst mal nur die ID als Customdata Platzhalter
+        custom_data=['Modul_Name'] 
     )
     
-    # Hover-Template anpassen
-    # %{label} = Das was im Segment steht (Kürzel oder Gruppe)
-    # %{value} = ECTS
-    # %{customdata[0]} = Voller Modulname (nur bei Modulen verfügbar)
-    #
-    # Problem (?): Bei Gruppen ist customdata[0] oft leer oder komisch.
-    # Lösung: Wir formatieren den Hover so, dass er immer Sinn macht.
+    # 2. HACK: Customdata patchen, damit Gruppen einen Namen haben
+    # Wir iterieren durch die Daten der Figur
+    # fig.data[0] ist der Sunburst-Trace
     
+    # Wir holen uns die Labels (IDs), die Plotly generiert hat
+    labels = fig.data[0]['labels']
+    
+    # Wir bauen eine neue Liste für customdata[0] (den Namen)
+    new_names = []
+    
+    # Mapping erstellen: ID -> Name (aus unserem DataFrame)
+    id_to_name = pd.Series(dff.Modul_Name.values, index=dff.Modul_ID).to_dict()
+    
+    for label in labels:
+        if label in id_to_name:
+            # Es ist ein Modul -> Nimm den echten Namen
+            new_names.append(id_to_name[label])
+        else:
+            # Es ist eine Gruppe (oder Root) -> Nimm das Label selbst als Namen!
+            # Damit verschwindet das (?)
+            new_names.append(label)
+            
+    # Das gepatchte Array zurück in die Figur schieben
+    # Plotly erwartet customdata als Liste von Listen (für mehrere Spalten)
+    # Wir haben nur eine Spalte (Name), also wrappen wir es
+    fig.update_traces(customdata=list(zip(new_names)))
+
+    # 3. Hover Template setzen
     fig.update_traces(
-        hovertemplate="<b>%{customdata[0]}</b><br>Kürzel: %{label}<br>ECTS: %{value}<extra></extra>",
+        hovertemplate='<b>%{customdata[0]}</b><br>ECTS: %{value}<extra></extra>',
         textfont=dict(size=14),
         insidetextorientation='radial'
     )
     
-    # Fix für Gruppen-Hover (Wo customdata fehlt):
-    # Plotly ist schlau genug: Wenn customdata fehlt (auf Gruppenebene), 
-    # zeigt es oft den Fallback. Aber um das (?) sicher wegzukriegen:
-    # Wir können das Template nicht pro Ebene ändern in PX.
-    
-    # Wenn das (?) noch da ist, müssen wir die Datenbasis anpassen.
-    # Aber probier erst mal das hier. Es ist der sauberste PX-Weg.
-    
     fig.update_layout(margin=dict(t=0, l=0, r=0, b=0), font=dict(family="Roboto, sans-serif"))
     return fig
-
 if __name__ == "__main__":
     app.run(debug=True, port=8050)
