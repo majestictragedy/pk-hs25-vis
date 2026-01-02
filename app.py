@@ -166,7 +166,7 @@ dcc.Tab(label='Modul-Explorer', style=tab_style, selected_style=tab_selected_sty
                 html.Span("ECTS-Punkte", style={'fontWeight': 'bold'}),
                 " innerhalb der Modulgruppen.",
                 html.Br(),
-            ], style={'fontSize': '14px', 'color': COLORS['text'], 'marginBottom': '20px'}),
+            ], style={'fontSize': '16px', 'color': COLORS['text'], 'marginBottom': '20px'}),
             
             # Die Filter-Elemente (Dropdowns) in einer Flex-Row
             html.Div([
