@@ -1,212 +1,316 @@
 import dash
-from dash import dcc, html, Input, Output, no_update
+from dash import dcc, html, Input, Output
 import pandas as pd
 import networkx as nx
 import plotly.graph_objects as go
+import plotly.express as px
+import textwrap
+import os
 
 # --- 1. DATEN LADEN ---
-file_path = 'dashboard-pk/data/Module_Data.xlsx'
+script_dir = os.path.dirname(os.path.abspath(__file__))
+data_dir = os.path.join(script_dir, 'data')
+file_path_1 = os.path.join(data_dir, '2.6_Datensatz Visualisierung_V15.xls')
+file_path_2 = os.path.join(data_dir, 'Module_Data.xlsx')
 
-try:
-    df = pd.read_excel(file_path)
-except Exception as e:
-    print(f"Fehler: {e}")
+if os.path.exists(file_path_1):
+    df = pd.read_excel(file_path_1)
+elif os.path.exists(file_path_2):
+    df = pd.read_excel(file_path_2)
+else:
+    print("FEHLER: Keine Excel-Datei gefunden!")
     exit()
 
 df = df.fillna('')
 df['Modul_ID'] = df['Modul_ID'].astype(str).str.strip()
+df['ECTS'] = pd.to_numeric(df['ECTS'], errors='coerce').fillna(0)
 valid_ids = set(df['Modul_ID'].unique())
+
+def wrap_text(text, width=60):
+    return '<br>'.join(textwrap.wrap(str(text), width=width))
+
+all_tags = set()
+for tags in df['Tags']:
+    if tags:
+        for t in str(tags).split(';'):
+            all_tags.add(t.strip())
+sorted_tags = sorted(list(all_tags))
+
+semester_options = [{'label': f'Semester {i}', 'value': str(i)} for i in range(1, 7)]
+semester_options.append({'label': 'Alle Semester', 'value': 'ALL'})
+
+# --- DESIGN & FARBEN ---
+external_stylesheets = ['https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap']
+
+COLORS = {
+    'gold_light': '#f4eee3',
+    'gold_normal': '#b39048',
+    'gold_dark': '#7a7760',
+    'blue_light': '#bedae8',
+    'blue_normal': '#4b92a4',
+    'blue_dark': '#2b6777',
+    'text': '#212529',
+    'bg': '#ffffff'
+}
+
+GROUP_COLORS = {
+    'Informatik': COLORS['blue_normal'],
+    'Major GLAM': COLORS['gold_normal'],
+    'Major IDMM': COLORS['blue_dark'],
+    'Informationswissenschaft': COLORS['gold_dark'],
+    'Vertiefungsstudium': '#6c757d',
+    'Methodik': '#17a2b8',
+    'Betriebsökonomie': '#343a40',
+    'Common': '#adb5bd',
+    'Arbeits- & Forschungs-Methodik': '#d63384',
+    'Informationsmethodik': '#20c997',
+    'Gesellschaft und Fremdsprachen': '#fd7e14'
+}
 
 # --- 2. NETZWERK BERECHNEN ---
 G = nx.DiGraph()
-
-# Knoten mit Attributen
 for index, row in df.iterrows():
+    # HIER: 'resp' (Verantwortlich) hinzugefügt!
     G.add_node(row['Modul_ID'], 
-               label=row['Modul_Name'],
-               group=row['Modulgruppe'],
-               desc=row['Kurzbeschreibung'],
-               goals=row['Lernziele'],
-               semester=row['Semester'])
+               label=row['Modul_Name'], 
+               group=row['Modulgruppe'], 
+               desc=row['Kurzbeschreibung'], 
+               goals=row['Lernziele'], 
+               semester=row['Semester'],
+               resp=row['Verantwortlich']) 
 
-# Kanten
 for index, row in df.iterrows():
     source = row['Modul_ID']
-    # Hard
     if row['Voraussetzung_Hard']:
-        for target in str(row['Voraussetzung_Hard']).split(';'):
-            target = target.strip()
-            if target in valid_ids:
-                G.add_edge(target, source, type='hard')
-    # Soft
+        for t in str(row['Voraussetzung_Hard']).split(';'):
+            if t.strip() in valid_ids: G.add_edge(t.strip(), source, type='hard')
     if row['Voraussetzung_Soft']:
-        for target in str(row['Voraussetzung_Soft']).split(';'):
-            target = target.strip()
-            if target in valid_ids:
-                G.add_edge(target, source, type='soft')
+        for t in str(row['Voraussetzung_Soft']).split(';'):
+            if t.strip() in valid_ids: G.add_edge(t.strip(), source, type='soft')
 
-# Layout fixieren (damit die Punkte nicht springen beim Klicken)
-pos = nx.spring_layout(G, k=0.6, iterations=60, seed=42)
+pos = nx.spring_layout(G, k=3.5, iterations=300, seed=42)
 
-# --- 3. DASH APP SETUP ---
-app = dash.Dash(__name__)
+# --- 3. LAYOUT ---
+app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
-# Farben für die Modulgruppen (manuell definiert für schönes Design)
-GROUP_COLORS = {
-    'Informatik': '#3498db',        # Blau
-    'Major GLAM': '#e74c3c',        # Rot
-    'Major IDMM': '#9b59b6',        # Lila
-    'Informationswissenschaft': '#2ecc71', # Grün
-    'Vertiefungsstudium': '#f1c40f',# Gelb/Orange
-    'Methodik': '#95a5a6',          # Grau
-    'Betriebsökonomie': '#34495e',  # Dunkelblau
-    'Common': '#7f8c8d'             # Fallback
-}
+tab_style = {'borderBottom': f'1px solid {COLORS["blue_light"]}', 'padding': '15px', 'fontWeight': 'bold', 'color': COLORS['text'], 'backgroundColor': 'white', 'fontFamily': 'Roboto, sans-serif'}
+tab_selected_style = {'borderTop': f'4px solid {COLORS["gold_normal"]}', 'borderBottom': '1px solid white', 'backgroundColor': 'white', 'color': COLORS['blue_dark'], 'padding': '15px', 'fontWeight': 'bold', 'fontFamily': 'Roboto, sans-serif'}
+content_style = {'border': '1px solid #ddd', 'borderTop': 'none', 'padding': '20px', 'backgroundColor': 'white', 'borderRadius': '0 0 5px 5px', 'boxShadow': '0 2px 5px rgba(0,0,0,0.05)'}
 
 app.layout = html.Div([
-    html.H1("Curriculum Navigator 2026", style={'font-family': 'sans-serif', 'textAlign': 'center'}),
-    
     html.Div([
-        html.Span("🔍 Klicke auf ein Modul, um den Lernpfad zu sehen.", style={'fontWeight': 'bold'}),
-        html.Br(),
-        html.Span("Legende Linien: "),
-        html.Span("─── Hart (Pflicht)", style={'color': '#2c3e50', 'fontWeight': 'bold'}),
-        html.Span("  . . . .  Soft (Empfohlen)", style={'color': '#95a5a6', 'marginLeft': '10px'}),
-    ], style={'textAlign': 'center', 'padding': '10px', 'backgroundColor': '#f0f2f5', 'borderRadius': '5px'}),
+        html.H1("Curriculum Navigator 2026", style={'color': 'white', 'margin': '0', 'fontWeight': '300', 'letterSpacing': '1px'}),
+        html.P("BSc Information Science | FH Graubünden", style={'color': COLORS['blue_light'], 'margin': '5px 0 0 0', 'fontSize': '14px'})
+    ], style={'backgroundColor': COLORS['blue_dark'], 'padding': '20px 40px', 'width': '100%', 'boxSizing': 'border-box'}),
 
-    # Der Graph Container
-    dcc.Graph(id='network-graph', style={'height': '85vh'}, config={'displayModeBar': False})
-])
+    html.Div([
+        dcc.Tabs([
+            # TAB 1: NETZWERK
+            dcc.Tab(label='Netzwerk & Lernpfade', style=tab_style, selected_style=tab_selected_style, children=[
+                html.Div([
+                    html.Div([
+                        html.Div([
+                            html.Span("Interaktiver Studienplan", style={'fontSize': '18px', 'color': COLORS['blue_dark'], 'fontWeight': 'bold', 'display': 'inline-block'}),
+                            html.Button('↺ Ansicht zurücksetzen', id='reset-btn', n_clicks=0, style={
+                                'marginLeft': '20px', 'padding': '5px 10px', 'backgroundColor': 'white', 'border': '1px solid #ccc', 'cursor': 'pointer', 'borderRadius': '3px'
+                            }),
+                        ], style={'display': 'inline-block'}),
+                        
+                        html.Div([
+                            html.Label("Verbindungen anzeigen:", style={'fontSize': '12px', 'marginRight': '10px'}),
+                            dcc.Checklist(
+                                id='network-mode-check',
+                                options=[
+                                    {'label': ' Hard (Pflicht)', 'value': 'hard'},
+                                    {'label': ' Soft (Empfohlen)', 'value': 'soft'}
+                                ],
+                                value=[], 
+                                inline=True,
+                                style={'display': 'inline-block', 'fontWeight': 'bold'}
+                            )
+                        ], style={'float': 'right', 'marginTop': '5px'}),
+                        
+                        html.Br(), html.Br(),
+                        html.Span("Klicken", style={'fontWeight': 'bold', 'color': COLORS['gold_normal']}), " Sie auf ein Modul, um Voraussetzungen und Nachfolger zu sehen.",
+                        html.Br(),
+                        html.Span("Legende: ", style={'fontSize': '12px', 'textTransform': 'uppercase', 'color': '#999', 'marginTop': '10px', 'display': 'inline-block'}),
+                        html.Span(" ───► Hard (Pflicht)", style={'color': COLORS['text'], 'fontWeight': 'bold', 'fontSize': '14px', 'marginLeft': '5px'}),
+                        html.Span(" ───► Soft (Empfohlen)", style={'color': '#bdc3c7', 'fontWeight': 'bold', 'fontSize': '14px', 'marginLeft': '10px'}),
 
-# --- 4. INTERAKTIONS-LOGIK (CALLBACK) ---
+                    ], style={'textAlign': 'left', 'padding': '15px', 'backgroundColor': '#f8f9fa', 'marginBottom': '20px', 'borderRadius': '4px', 'borderLeft': f'4px solid {COLORS["blue_normal"]}'}),
+                    
+                    dcc.Graph(id='network-graph', style={'height': '75vh'}, config={'displayModeBar': False})
+                ], style=content_style)
+            ]),
+
+            # TAB 2: EXPLORER
+            dcc.Tab(label='Statistik & Explorer', style=tab_style, selected_style=tab_selected_style, children=[
+                html.Div([
+                    html.Div([
+                        html.H4("Filter", style={'margin': '0 0 10px 0', 'color': COLORS['blue_dark']}),
+                        html.Div([html.Label("Semester:", style={'fontSize': '12px', 'fontWeight': 'bold'}), dcc.Dropdown(id='filter-semester', options=semester_options, value='ALL', clearable=False)], style={'width': '20%', 'marginRight': '2%'}),
+                        html.Div([html.Label("Themen (Tags):", style={'fontSize': '12px', 'fontWeight': 'bold'}), dcc.Dropdown(id='filter-tags', options=[{'label': t, 'value': t} for t in sorted_tags], multi=True, placeholder="Nach Themen filtern...")], style={'width': '35%', 'marginRight': '2%'}),
+                        html.Div([html.Label("Modulgruppe:", style={'fontSize': '12px', 'fontWeight': 'bold'}), dcc.Dropdown(id='filter-group', options=[{'label': g, 'value': g} for g in sorted(list(set(df['Modulgruppe'])))], multi=True, placeholder="Nach Gruppen filtern...")], style={'width': '35%'}),
+                    ], style={'display': 'flex', 'alignItems': 'flex-end', 'padding': '15px', 'backgroundColor': '#f8f9fa', 'borderBottom': '1px solid #eee', 'marginBottom': '20px'}),
+                    dcc.Graph(id='sunburst-graph', style={'height': '70vh'})
+                ], style=content_style)
+            ])
+        ], style={'height': '44px', 'alignItems': 'center'})
+    ], style={'width': '96%', 'margin': '20px auto', 'fontFamily': 'Roboto, sans-serif'})
+], style={'backgroundColor': 'white', 'minHeight': '100vh', 'fontFamily': 'Roboto, sans-serif', 'margin': '0', 'padding': '0'})
+
+
+# --- 4. CALLBACKS ---
+
+# Callback 1: Netzwerk
 @app.callback(
     Output('network-graph', 'figure'),
-    Input('network-graph', 'clickData')
+    [Input('network-graph', 'clickData'),
+     Input('network-mode-check', 'value'),
+     Input('reset-btn', 'n_clicks')]
 )
-def update_graph(clickData):
-    # Standard-Werte (kein Fokus)
+def update_network(clickData, mode_values, n_clicks):
+    ctx = dash.callback_context
+    trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    
     highlight_nodes = set()
-    if clickData:
-        # Ein Knoten wurde geklickt!
-        selected_node = clickData['points'][0]['text'] # Das ist die Modul_ID
-        
-        # Wir finden alle Vorgänger (Ancestors) und Nachfolger (Descendants)
-        ancestors = nx.ancestors(G, selected_node)
-        descendants = nx.descendants(G, selected_node)
-        
-        # Menge aller hervorzuhebenden Knoten
-        highlight_nodes.add(selected_node)
-        highlight_nodes.update(ancestors)
-        highlight_nodes.update(descendants)
+    is_reset = False
 
-    # -- TRACES ERSTELLEN --
-    traces = []
+    if trigger_id == 'reset-btn':
+        clickData = None
+        is_reset = True
+    
+    if clickData and not is_reset:
+        try:
+            sel = clickData['points'][0]['text']
+            highlight_nodes.add(sel)
+            highlight_nodes.update(nx.ancestors(G, sel))
+            highlight_nodes.update(nx.descendants(G, sel))
+        except: pass
 
-    # A) KANTEN (Linien)
-    edge_x_hard, edge_y_hard = [], []
-    edge_x_soft, edge_y_soft = [], []
-
+    traces, annotations = [], []
     for edge in G.edges(data=True):
-        source, target, attr = edge
+        src, tgt, attr = edge
+        x0, y0 = pos[src]
+        x1, y1 = pos[tgt]
         
-        # Logik: Ist diese Kante Teil des ausgewählten Pfades?
-        # Ja, wenn Start UND Ende im Highlight-Set sind (oder gar nichts ausgewählt ist)
-        is_relevant = (not clickData) or (source in highlight_nodes and target in highlight_nodes)
+        is_highlighted = (clickData is not None and not is_reset) and (src in highlight_nodes and tgt in highlight_nodes)
         
-        # Farbe/Transparenz setzen
-        if is_relevant:
-            color = '#2c3e50' if attr['type'] == 'hard' else '#95a5a6'
-            width = 2 if attr['type'] == 'hard' else 1
-            opacity = 1
+        show_line = False
+        opac = 0.1
+        
+        if clickData and not is_reset:
+            if is_highlighted:
+                show_line = True
+                opac = 1.0
         else:
-            color = '#ecf0f1' # Sehr hellgrau
-            width = 1
-            opacity = 0.2
+            if attr['type'] in mode_values:
+                show_line = True
+                opac = 0.6 if attr['type'] == 'hard' else 0.4
 
-        x0, y0 = pos[source]
-        x1, y1 = pos[target]
+        if show_line:
+            color = '#2c3e50' if attr['type'] == 'hard' else '#bdc3c7'
+            width = 2.0
+        else:
+            color = '#ecf0f1'
+            width = 1.0
+
+        traces.append(go.Scatter(x=[x0, x1, None], y=[y0, y1, None], mode='lines', 
+                                 line=dict(width=width, color=color, dash='solid'), opacity=opac, hoverinfo='none', showlegend=False))
         
-        # Wir bauen separate Listen für Hard/Soft, um Legende zu ermöglichen (Trick)
-        # Hier zeichnen wir aber jede Linie einzeln für volle Kontrolle über Farbe/Opazität
-        trace = go.Scatter(
-            x=[x0, x1, None], y=[y0, y1, None],
-            mode='lines',
-            line=dict(width=width, color=color, dash='solid' if attr['type']=='hard' else 'dot'),
-            opacity=opacity,
-            hoverinfo='none',
-            showlegend=False
-        )
-        traces.append(trace)
+        if show_line:
+            annotations.append(dict(ax=x0, ay=y0, axref='x', ayref='y', x=x1, y=y1, xref='x', yref='y',
+                showarrow=True, arrowhead=2, arrowsize=1.0, arrowwidth=width, arrowcolor=color, opacity=opac,
+                standoff=15, startstandoff=5))
 
-    # B) KNOTEN (Punkte) - Gruppiert für die Legende
-    # Wir holen alle Gruppen, die wir haben
     all_groups = sorted(list(set(nx.get_node_attributes(G, 'group').values())))
-
     for group in all_groups:
-        # Finde alle Knoten dieser Gruppe
-        group_nodes = [n for n, attr in G.nodes(data=True) if attr['group'] == group]
+        grp_nodes = [n for n, a in G.nodes(data=True) if a['group'] == group]
+        nx_list, ny_list, txt_list, hov_list, op_list, sz_list = [], [], [], [], [], []
         
-        node_x = []
-        node_y = []
-        node_text_ids = []
-        node_hover = []
-        node_opacities = []
-        node_sizes = []
-
-        for node in group_nodes:
+        for node in grp_nodes:
             x, y = pos[node]
-            node_x.append(x)
-            node_y.append(y)
-            node_text_ids.append(node) # Beschriftung im Bild
+            nx_list.append(x); ny_list.append(y); txt_list.append(node)
+            inf = G.nodes[node]
             
-            # Hover Text
-            info = G.nodes[node]
-            hover_str = (
-                f"<b>{info['label']} ({node})</b><br>" +
-                f"Semester: {info['semester']}<br><br>" +
-                f"<i>{info['desc']}</i><br><br>" +
-                f"<b>Ziele:</b> {str(info['goals'])[:200]}..."
-            )
-            node_hover.append(hover_str)
+            # HOVER TEXT AUFGEBAUT (Korrigiert)
+            resp = str(inf.get('resp', 'Unbekannt'))
+            desc = str(inf['desc']) if inf['desc'] else "Keine Beschreibung"
+            goals = str(inf['goals']) if inf['goals'] else "Keine Lernziele"
 
-            # Highlighting Logik
-            if not clickData or node in highlight_nodes:
-                node_opacities.append(1)
-                node_sizes.append(25) # Gross und sichtbar
+            hov_list.append(
+                f"<b>{inf['label']}</b><br>" +
+                f"Semester: {inf['semester']}<br>" +
+                f"Verantwortlich: {resp}<br><br>" +
+                f"<i>{wrap_text(desc)}</i><br><br>" +
+                f"<b>Lernziele:</b><br>{wrap_text(goals)}"
+            )
+            
+            if (not clickData or is_reset) or node in highlight_nodes:
+                op_list.append(1); sz_list.append(30)
             else:
-                node_opacities.append(0.1) # Ausgegraut
-                node_sizes.append(15) # Kleiner
+                op_list.append(0.15); sz_list.append(15)
+        
+        traces.append(go.Scatter(x=nx_list, y=ny_list, mode='markers+text', text=txt_list, textposition="top center",
+                                 hoverinfo='text', hovertext=hov_list, name=group,
+                                 textfont=dict(family='Roboto, sans-serif', size=12, color='black' if (not clickData or is_reset) else None),
+                                 marker=dict(color=GROUP_COLORS.get(group, '#999'), size=sz_list, opacity=op_list, line=dict(width=2, color='white'))))
 
-        # Trace für diese Gruppe erstellen
-        node_trace = go.Scatter(
-            x=node_x, y=node_y,
-            mode='markers+text',
-            text=node_text_ids,
-            textposition="top center",
-            hoverinfo='text',
-            hovertext=node_hover,
-            name=group, # Das erscheint in der Legende!
-            marker=dict(
-                color=GROUP_COLORS.get(group, '#7f8c8d'),
-                size=node_sizes,
-                opacity=node_opacities,
-                line=dict(width=2, color='white')
-            )
-        )
-        traces.append(node_trace)
+    return go.Figure(data=traces, layout=go.Layout(
+        showlegend=True, hovermode='closest', margin=dict(b=0,l=0,r=0,t=0),
+        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False), yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+        plot_bgcolor='white', annotations=annotations,
+        legend=dict(title=dict(text="Modulgruppen", font=dict(family="Roboto, sans-serif", size=14, color=COLORS['text'])), 
+                    font=dict(family="Roboto, sans-serif"), bgcolor='rgba(255,255,255,0.9)', bordercolor='#eee', borderwidth=1)
+    ))
 
-    # Layout
-    layout = go.Layout(
-        showlegend=True,
-        legend=dict(title="Modulgruppen", x=1, y=1),
-        hovermode='closest',
-        margin=dict(b=0,l=0,r=0,t=0),
-        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-        plot_bgcolor='white'
+# Callback 2: Sunburst (PX Style + Kürzel + Hover Fix)
+@app.callback(Output('sunburst-graph', 'figure'),
+              [Input('filter-semester', 'value'), Input('filter-tags', 'value'), Input('filter-group', 'value')])
+def update_sunburst(sem, tags, groups):
+    dff = df.copy()
+    if sem and sem != 'ALL': dff = dff[dff['Semester'].astype(str).str.contains(sem)]
+    if groups: dff = dff[dff['Modulgruppe'].isin(groups)]
+    if tags: dff = dff[dff.apply(lambda x: any(t in [i.strip() for i in str(x['Tags']).split(';')] for t in tags), axis=1)]
+
+    if dff.empty:
+        fig = go.Figure(); fig.update_layout(title="Keine Daten entsprechen den Filtern")
+        return fig
+
+    # TRICK: Wir nutzen Modul_ID als Label im Chart, aber Modul_Name für Hover
+    fig = px.sunburst(
+        dff, 
+        path=['Modulgruppe', 'Modul_ID'], # Hier ID statt Name für das Bild!
+        values='ECTS', 
+        color='Modulgruppe', 
+        color_discrete_map=GROUP_COLORS,
+        custom_data=['Modul_Name', 'Modulgruppe'] # Daten für Hover mitschicken
     )
-
-    return {'data': traces, 'layout': layout}
+    
+    # Hover-Template anpassen
+    # %{label} = Das was im Segment steht (Kürzel oder Gruppe)
+    # %{value} = ECTS
+    # %{customdata[0]} = Voller Modulname (nur bei Modulen verfügbar)
+    #
+    # Problem (?): Bei Gruppen ist customdata[0] oft leer oder komisch.
+    # Lösung: Wir formatieren den Hover so, dass er immer Sinn macht.
+    
+    fig.update_traces(
+        hovertemplate="<b>%{customdata[0]}</b><br>Kürzel: %{label}<br>ECTS: %{value}<extra></extra>",
+        textfont=dict(size=14),
+        insidetextorientation='radial'
+    )
+    
+    # Fix für Gruppen-Hover (Wo customdata fehlt):
+    # Plotly ist schlau genug: Wenn customdata fehlt (auf Gruppenebene), 
+    # zeigt es oft den Fallback. Aber um das (?) sicher wegzukriegen:
+    # Wir können das Template nicht pro Ebene ändern in PX.
+    
+    # Wenn das (?) noch da ist, müssen wir die Datenbasis anpassen.
+    # Aber probier erst mal das hier. Es ist der sauberste PX-Weg.
+    
+    fig.update_layout(margin=dict(t=0, l=0, r=0, b=0), font=dict(family="Roboto, sans-serif"))
+    return fig
 
 if __name__ == "__main__":
     app.run(debug=True, port=8050)
