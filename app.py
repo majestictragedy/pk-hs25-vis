@@ -157,6 +157,8 @@ dcc.Tab(label='Modul-Explorer', style=tab_style, selected_style=tab_selected_sty
                     'fontWeight': 'bold', 
                     'display': 'inline-block'
                 }),
+                html.Br(),
+                html.Br(),
             ], style={'marginBottom': '10px'}),
             
             # Erklärungstext (wie in Tab 1)
